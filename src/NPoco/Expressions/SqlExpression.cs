@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Collections.ObjectModel;
 using System.Linq.Expressions;
+using IDT.Boss.Infrastructure.Data;
 using NPoco.Linq;
 
 namespace NPoco.Expressions
@@ -67,7 +68,7 @@ namespace NPoco.Expressions
         string ApplyPaging(string sql, IEnumerable<PocoColumn> columns);
     }
 
-    public abstract class SqlExpression<T> : ISqlExpression
+    public abstract class SqlExpression<T> : ISqlExpression, ISqlQuery<T>
     {
         private Expression<Func<T, bool>> underlyingExpression;
         private List<string> orderByProperties = new List<string>();
@@ -198,7 +199,7 @@ namespace NPoco.Expressions
         /// <typeparam name='TKey'>
         /// objectWithProperties
         /// </typeparam>
-        public virtual SqlExpression<T> Select<TKey>(Expression<Func<T, TKey>> fields)
+        public virtual ISqlQuery<T> Select<TKey>(Expression<Func<T, TKey>> fields)
         {
             sep = string.Empty;
             selectMembers.Clear();
@@ -218,7 +219,7 @@ namespace NPoco.Expressions
             return proj;
         }
 
-        public virtual SqlExpression<T> SelectDistinct<TKey>(Expression<Func<T, TKey>> fields)
+        public virtual ISqlQuery<T> SelectDistinct<TKey>(Expression<Func<T, TKey>> fields)
         {
             sep = string.Empty;
             selectMembers.Clear();
@@ -251,7 +252,7 @@ namespace NPoco.Expressions
             return onSql;
         }
 
-        public virtual SqlExpression<T> Where(Expression<Func<T, bool>> predicate)
+        public virtual ISqlQuery<T> Where(Expression<Func<T, bool>> predicate)
         {
             if (predicate != null)
             {
@@ -337,7 +338,7 @@ namespace NPoco.Expressions
         //    return this;
         //}
 
-        public virtual SqlExpression<T> GroupBy<TKey>(Expression<Func<T, TKey>> keySelector)
+        public virtual ISqlQuery<T> GroupBy<TKey>(Expression<Func<T, TKey>> keySelector)
         {
             sep = string.Empty;
             groupBy = Visit(keySelector).ToString();
@@ -390,7 +391,7 @@ namespace NPoco.Expressions
         //    return this;
         //}
 
-        public virtual SqlExpression<T> OrderBy<TKey>(Expression<Func<T, TKey>> keySelector)
+        public virtual ISqlQuery<T> OrderBy<TKey>(Expression<Func<T, TKey>> keySelector)
         {
             sep = string.Empty;
             orderByProperties.Clear();
@@ -404,7 +405,7 @@ namespace NPoco.Expressions
             return this;
         }
 
-        public virtual SqlExpression<T> ThenBy<TKey>(Expression<Func<T, TKey>> keySelector)
+        public virtual ISqlQuery<T> ThenBy<TKey>(Expression<Func<T, TKey>> keySelector)
         {
             sep = string.Empty;
             generalMembers.Clear();
@@ -416,7 +417,7 @@ namespace NPoco.Expressions
             return this;
         }
 
-        public virtual SqlExpression<T> OrderByDescending<TKey>(Expression<Func<T, TKey>> keySelector)
+        public virtual ISqlQuery<T> OrderByDescending<TKey>(Expression<Func<T, TKey>> keySelector)
         {
             sep = string.Empty;
             orderByProperties.Clear();
@@ -430,7 +431,7 @@ namespace NPoco.Expressions
             return this;
         }
 
-        public virtual SqlExpression<T> ThenByDescending<TKey>(Expression<Func<T, TKey>> keySelector)
+        public virtual ISqlQuery<T> ThenByDescending<TKey>(Expression<Func<T, TKey>> keySelector)
         {
             sep = string.Empty;
             generalMembers.Clear();
@@ -464,7 +465,7 @@ namespace NPoco.Expressions
         /// <param name='rows'>
         /// Number of rows returned by a SELECT statement
         /// </param>	
-        public virtual SqlExpression<T> Limit(int skip, int rows)
+        public virtual ISqlQuery<T> Limit(int skip, int rows)
         {
             Rows = rows;
             Skip = skip;
@@ -477,7 +478,7 @@ namespace NPoco.Expressions
         /// <param name='rows'>
         /// Number of rows returned by a SELECT statement
         /// </param>
-        public virtual SqlExpression<T> Limit(int rows)
+        public virtual ISqlQuery<T> Limit(int rows)
         {
             Rows = rows;
             Skip = 0;

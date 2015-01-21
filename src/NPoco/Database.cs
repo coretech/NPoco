@@ -682,7 +682,7 @@ namespace NPoco
         public List<T> FetchWhere<T>(Expression<Func<T, bool>> expression)
         {
             var ev = _dbType.ExpressionVisitor<T>(this, true);
-            var query = ev.Where(expression);
+            var query = ev.Where(expression) as SqlExpression<T>;
             var sql = query.Context.ToSelectStatement();
             return Fetch<T>(sql, query.Context.Params.ToArray());
         }
@@ -1513,7 +1513,7 @@ namespace NPoco
         public int Update<T>(T poco, Expression<Func<T, object>> fields)
         {
             var expression = DatabaseType.ExpressionVisitor<T>(this);
-            expression = expression.Select(fields);
+            expression = expression.Select(fields) as SqlExpression<T>;
             var columnNames = ((ISqlExpression) expression).SelectMembers.Select(x => x.PocoColumn.ColumnName);
             var otherNames = ((ISqlExpression) expression).GeneralMembers.Select(x => x.PocoColumn.ColumnName);
             return Update(poco, columnNames.Union(otherNames));

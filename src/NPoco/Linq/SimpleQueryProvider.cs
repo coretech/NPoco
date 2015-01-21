@@ -56,7 +56,7 @@ namespace NPoco.Linq
             _database = database;
             _sqlExpression = database.DatabaseType.ExpressionVisitor<T>(database, true);
             _buildComplexSql = new ComplexSqlBuilder<T>(database, _sqlExpression, _joinSqlExpressions);
-            _sqlExpression = _sqlExpression.Where(whereExpression);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.Where(whereExpression);
         }
 
         public QueryProvider(IDatabase database)
@@ -102,15 +102,15 @@ namespace NPoco.Linq
 
         public IQueryProvider<T> Where(Expression<Func<T, bool>> whereExpression)
         {
-            _sqlExpression = _sqlExpression.Where(whereExpression);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.Where(whereExpression);
             return this;
         }
 
         private void AddLimitAndWhere(Expression<Func<T, bool>> whereExpression)
         {
             if (whereExpression != null)
-                _sqlExpression = _sqlExpression.Where(whereExpression);
-            _sqlExpression = _sqlExpression.Limit(1);
+                _sqlExpression = (SqlExpression<T>) _sqlExpression.Where(whereExpression);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.Limit(1);
         }
 
         public T FirstOrDefault()
@@ -165,7 +165,7 @@ namespace NPoco.Linq
         public int Count(Expression<Func<T, bool>> whereExpression)
         {
             if (whereExpression != null)
-                _sqlExpression = _sqlExpression.Where(whereExpression);
+                _sqlExpression = (SqlExpression<T>) _sqlExpression.Where(whereExpression);
 
             var sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, true);
 
@@ -200,7 +200,7 @@ namespace NPoco.Linq
 
             _database.OneTimeCommandTimeout = saveTimeout;
 
-            _sqlExpression = _sqlExpression.Limit(offset, pageSize);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.Limit(offset, pageSize);
             result.Items = ToList();
 
             return result;
@@ -230,37 +230,37 @@ namespace NPoco.Linq
 
         public IQueryProvider<T> Limit(int rows)
         {
-            _sqlExpression = _sqlExpression.Limit(rows);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.Limit(rows);
             return this;
         }
 
         public IQueryProvider<T> Limit(int skip, int rows)
         {
-            _sqlExpression = _sqlExpression.Limit(skip, rows);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.Limit(skip, rows);
             return this;
         }
 
         public IQueryProvider<T> OrderBy(Expression<Func<T, object>> column)
         {
-            _sqlExpression = _sqlExpression.OrderBy(column);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.OrderBy(column);
             return this;
         }
 
         public IQueryProvider<T> OrderByDescending(Expression<Func<T, object>> column)
         {
-            _sqlExpression = _sqlExpression.OrderByDescending(column);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.OrderByDescending(column);
             return this;
         }
 
         public IQueryProvider<T> ThenBy(Expression<Func<T, object>> column)
         {
-            _sqlExpression = _sqlExpression.ThenBy(column);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.ThenBy(column);
             return this;
         }
 
         public IQueryProvider<T> ThenByDescending(Expression<Func<T, object>> column)
         {
-            _sqlExpression = _sqlExpression.ThenByDescending(column);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.ThenByDescending(column);
             return this;
         }
     }

@@ -27,7 +27,7 @@ namespace NPoco.Linq
 
         public IUpdateQueryProvider<T> Where(Expression<Func<T, bool>> whereExpression)
         {
-            _sqlExpression = _sqlExpression.Where(whereExpression);
+            _sqlExpression = (SqlExpression<T>) _sqlExpression.Where(whereExpression);
             return this;
         }
 
