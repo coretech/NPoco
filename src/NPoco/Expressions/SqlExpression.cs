@@ -1521,13 +1521,13 @@ namespace NPoco.Expressions
                     statement = string.Format("lower({0})", quotedColName);
                     break;
                 case "StartsWith":
-                    statement = string.Format("upper({0}) like {1}", quotedColName, CreateParam(args[0].ToString().ToUpper() + "%"));
+                    statement = string.Format("{0} like {1}", quotedColName, CreateParam(args[0].ToString() + "%"));
                     break;
                 case "EndsWith":
-                    statement = string.Format("upper({0}) like {1}", quotedColName, CreateParam("%" + args[0].ToString().ToUpper()));
+                    statement = string.Format("{0} like {1}", quotedColName, CreateParam("%" + args[0].ToString()));
                     break;
                 case "Contains":
-                    statement = string.Format("upper({0}) like {1}", quotedColName, CreateParam("%" + args[0].ToString().ToUpper() + "%"));
+                    statement = string.Format("{0} like {1}", quotedColName, CreateParam("%" + args[0].ToString() + "%"));
                     break;
                 case "Substring":
                     var startIndex = Int32.Parse(args[0].ToString()) + 1;
