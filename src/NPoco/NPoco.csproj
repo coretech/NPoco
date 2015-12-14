@@ -40,6 +40,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -48,6 +49,7 @@
   <ItemGroup>
     <Compile Include="AnsiString.cs" />
     <Compile Include="AutoSelectHelper.cs" />
+    <Compile Include="Base62.cs" />
     <Compile Include="Cache.cs" />
     <Compile Include="AliasAttribute.cs" />
     <Compile Include="ColumnAttribute.cs" />
@@ -69,6 +71,7 @@
     <Compile Include="DatabaseTypes\SqlServerCEDatabaseType.cs" />
     <Compile Include="DatabaseTypes\SqlServerDatabaseType.cs" />
     <Compile Include="Expressions\FirebirdSqlExpression.cs" />
+    <Compile Include="HashCodeCombiner.cs" />
     <Compile Include="Linq\ComplexSqlBuilder.cs" />
     <Compile Include="Linq\DeleteQueryProvider.cs" />
     <Compile Include="Linq\ISimpleQueryProviderExpression.cs" />

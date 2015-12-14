@@ -14,6 +14,7 @@ namespace NPoco
         public bool ComputedColumn { get; set; }
         public bool IgnoreColumn { get; set; }
         public bool VersionColumn { get; set; }
+        public VersionColumnType VersionColumnType { get; set; }
         public bool ForceToUtc { get; set; }
         public Type ColumnType { get; set; }
 
@@ -21,7 +22,7 @@ namespace NPoco
         {
             var ci = new ColumnInfo();
 
-            var attrs = mi.GetCustomAttributes(true);
+            var attrs = Attribute.GetCustomAttributes(mi, true);
             var colAttrs = attrs.OfType<ColumnAttribute>();
             var columnTypeAttrs = attrs.OfType<ColumnTypeAttribute>();
             var ignoreAttrs = attrs.OfType<IgnoreAttribute>();
@@ -29,7 +30,7 @@ namespace NPoco
             // Check if declaring poco has [ExplicitColumns] attribute
             var explicitColumns = mi.DeclaringType.GetCustomAttributes(typeof(ExplicitColumnsAttribute), true).Any();
 
-            var aliasColumn = (AliasAttribute) mi.GetCustomAttributes(typeof (AliasAttribute), true).FirstOrDefault();
+            var aliasColumn = (AliasAttribute) Attribute.GetCustomAttributes(mi, typeof(AliasAttribute), true).FirstOrDefault();
             // Ignore column if declarying poco has [ExplicitColumns] attribute
             // and property doesn't have an explicit [Column] attribute,
             // or property has an [Ignore] attribute
@@ -46,6 +47,10 @@ namespace NPoco
                 ci.ForceToUtc = colattr.ForceToUtc;
                 ci.ResultColumn = colattr is ResultColumnAttribute;
                 ci.VersionColumn = colattr is VersionColumnAttribute;
+                if (ci.VersionColumn)
+                {
+                    ci.VersionColumnType = ((VersionColumnAttribute) colattr).VersionColumnType;
+                }
                 ci.ComputedColumn = colattr is ComputedColumnAttribute;
                 ci.ColumnAlias = aliasColumn != null ? aliasColumn.Alias : null;
             }

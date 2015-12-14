@@ -68,8 +68,11 @@ namespace NPoco.FluentMappings
                     column.ResultColumn = scannerSettings.ResultPropertiesWhere(prop);
                     column.ComputedColumn = scannerSettings.ComputedPropertiesWhere(prop);
                     column.VersionColumn = scannerSettings.VersionPropertiesWhere(prop);
+                    column.VersionColumnType = scannerSettings.VersionColumnTypeAs(prop);
                     column.ForceUtc = scannerSettings.ForceDateTimesToUtcWhere(prop);
-                    pocoDefn.ColumnConfiguration.Add(prop.Name, column);
+
+                    if (!pocoDefn.ColumnConfiguration.ContainsKey(prop.Name))
+                        pocoDefn.ColumnConfiguration.Add(prop.Name, column);
                 }
 
                 config.Add(type, pocoDefn);
@@ -98,6 +101,7 @@ namespace NPoco.FluentMappings
                 DbColumnTypesAs = x => null,
                 ResultPropertiesWhere = x => false,
                 VersionPropertiesWhere = x => false,
+                VersionColumnTypeAs = x => VersionColumnType.Number,
                 ComputedPropertiesWhere = x => false,
                 ForceDateTimesToUtcWhere = x => true,
                 SequencesNamed = x => null,
@@ -139,6 +143,7 @@ namespace NPoco.FluentMappings
                     columnDefinition.Value.ResultColumn = columnInfo.ResultColumn;
                     columnDefinition.Value.ComputedColumn = columnInfo.ComputedColumn;
                     columnDefinition.Value.VersionColumn = columnInfo.VersionColumn;
+                    columnDefinition.Value.VersionColumnType = columnInfo.VersionColumnType;
                     columnDefinition.Value.ForceUtc = columnInfo.ForceToUtc;
                 }
             }
@@ -173,6 +178,7 @@ namespace NPoco.FluentMappings
                     convColDefinition.ResultColumn = overrideColumnDefinition.Value.ResultColumn ?? convColDefinition.ResultColumn;
                     convColDefinition.ComputedColumn = overrideColumnDefinition.Value.ComputedColumn ?? convColDefinition.ComputedColumn;
                     convColDefinition.VersionColumn = overrideColumnDefinition.Value.VersionColumn ?? convColDefinition.VersionColumn;
+                    convColDefinition.VersionColumnType = overrideColumnDefinition.Value.VersionColumnType ?? convColDefinition.VersionColumnType;
                     convColDefinition.MemberInfo = overrideColumnDefinition.Value.MemberInfo ?? convColDefinition.MemberInfo;
                     convColDefinition.ForceUtc = overrideColumnDefinition.Value.ForceUtc ?? convColDefinition.ForceUtc;
                 }
@@ -183,7 +189,7 @@ namespace NPoco.FluentMappings
         {
             var maps = mappings;
             var scana = scanner;
-            return new FluentConfig(mapper => new PocoDataFactory(t =>
+            return new FluentConfig(mapper => new PocoDataFactory((t, aliasCache) =>
             {
                 if (maps != null)
                 {
@@ -199,7 +205,7 @@ namespace NPoco.FluentMappings
                         return new FluentMappingsPocoData(t, typeMapping.Config[t], mapper);
                     }
                 }
-                return new PocoData(t, mapper);
+                return new PocoData(t, mapper, aliasCache);
             }));
         }
 

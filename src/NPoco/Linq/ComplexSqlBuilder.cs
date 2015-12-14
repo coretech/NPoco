@@ -19,18 +19,21 @@ namespace NPoco.Linq
             _joinSqlExpressions = joinSqlExpressions;
         }
 
-        public Sql GetSqlForProjection<T2>(Expression<Func<T, T2>> projectionExpression, Type[] types)
+        public Sql GetSqlForProjection<T2>(Expression<Func<T, T2>> projectionExpression, Type[] types, bool distinct)
         {
             var selectMembers = _database.DatabaseType.ExpressionVisitor<T>(_database).SelectProjection(projectionExpression);
             var newMembers = GetSelectMembers<T2>(types, selectMembers).ToList();
 
+            ((ISqlExpression)_sqlExpression).SelectMembers.Clear();
+            ((ISqlExpression)_sqlExpression).SelectMembers.AddRange(newMembers);
+
             if (!_joinSqlExpressions.Any())
             {
-                var finalsql = ((ISqlExpression)_sqlExpression).ApplyPaging(_sqlExpression.Context.ToSelectStatement(false), newMembers.Select(x => x.PocoColumn));
+                var finalsql = ((ISqlExpression)_sqlExpression).ApplyPaging(_sqlExpression.Context.ToSelectStatement(false, distinct), newMembers.Select(x => x.PocoColumn));
                 return new Sql(finalsql, _sqlExpression.Context.Params);
             }
 
-            var sql = BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), newMembers, false);
+            var sql = BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), newMembers, false, distinct);
             return sql;
         }
 
@@ -48,13 +51,13 @@ namespace NPoco.Linq
                 {
                     var pocoData = _database.PocoDataFactory.ForType(type);
                     var pk = pocoData.Columns.FirstOrDefault(x => x.Value.ColumnName == pocoData.TableInfo.PrimaryKey);
-                    newMembers.Add(new SelectMember() {EntityType = type, PocoColumn = pk.Value, SelectSql = _database.DatabaseType.EscapeSqlIdentifier(pk.Value.AutoAlias)});
+                    newMembers.Add(new SelectMember() {EntityType = type, PocoColumn = pk.Value});
                 }
             }
             return newMembers;
         }
 
-        public Sql BuildJoin(IDatabase database, SqlExpression<T> sqlExpression, List<JoinData> joinSqlExpressions, List<SelectMember> newMembers, bool count)
+        public Sql BuildJoin(IDatabase database, SqlExpression<T> sqlExpression, List<JoinData> joinSqlExpressions, List<SelectMember> newMembers, bool count, bool distinct)
         {
             var modelDef = database.PocoDataFactory.ForType(typeof (T));
             var sqlTemplate = count
@@ -112,7 +115,7 @@ namespace NPoco.Linq
 
             // replace templates
             var resultantSql = string.Format(sqlTemplate,
-                string.Join(", ", cols.Select(x=>x.StringCol).ToArray()),
+                (distinct ? "DISTINCT " : "") + string.Join(", ", cols.Select(x=>x.StringCol).ToArray()),
                 database.DatabaseType.EscapeTableName(modelDef.TableInfo.TableName) + " " + database.DatabaseType.EscapeTableName(modelDef.TableInfo.AutoAlias),
                 joins,
                 wheres.SQL,

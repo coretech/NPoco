@@ -52,7 +52,9 @@ namespace NPoco
         public static Delegate GetAutoMapper(Type[] types)
         {
             // Build a key
-            var key = string.Join(":", types.Select(x=>x.ToString()).ToArray());
+            var combiner = new HashCodeCombiner("auto-mapping");
+            combiner.Each(types, (x, t) => x.AddType(t));
+            var key = combiner.GetCombinedHashCode();
 
             return AutoMappers.Get(key, () =>
             {
@@ -102,11 +104,11 @@ namespace NPoco
         }
 
          // Find the split point in a result set for two different pocos and return the poco factory for the first
-        static Delegate FindSplitPoint(Database database, int typeIndex, Type typeThis, Type typeNext, string sql, string connectionString, IDataReader r, ref int pos)
+        static Delegate FindSplitPoint(Database database, int typeIndex, Type typeThis, Type typeNext, IDataReader r, ref int pos)
         {
             // Last?
             if (typeNext == null)
-                return database.PocoDataFactory.ForType(typeThis, true).MappingFactory.GetFactory(sql, connectionString, pos, r.FieldCount - pos, r, null);
+                return database.PocoDataFactory.ForType(typeThis, true).MappingFactory.GetFactory(pos, r.FieldCount - pos, r, null);
 
             // Get PocoData for the two types
             PocoData pdThis = database.PocoDataFactory.ForType(typeThis, typeIndex > 0);
@@ -125,7 +127,7 @@ namespace NPoco
                     || (!pdThis.Columns.Any(x => fieldName.Equals(x.Value.AutoAlias, StringComparison.OrdinalIgnoreCase)) && pdNext.Columns.Any(x => fieldName.Equals(x.Value.AutoAlias, StringComparison.OrdinalIgnoreCase)))
                     || (!pdThis.Columns.Any(x => fieldName.Equals(x.Value.ColumnAlias, StringComparison.OrdinalIgnoreCase)) && pdNext.Columns.Any(x => fieldName.Equals(x.Value.ColumnAlias, StringComparison.OrdinalIgnoreCase))))
                 {
-                    return pdThis.MappingFactory.GetFactory(sql, connectionString, firstColumn, pos - firstColumn, r, null);
+                    return pdThis.MappingFactory.GetFactory(firstColumn, pos - firstColumn, r, null);
                 }
                 usedColumns.Add(fieldName, true);
             }
@@ -134,7 +136,7 @@ namespace NPoco
         }
 
         // Create a multi-poco factory
-        static Func<IDataReader, Delegate, TRet> CreateMultiPocoFactory<TRet>(Database database, Type[] types, string sql, string connectionString, IDataReader r)
+        static Func<IDataReader, Delegate, TRet> CreateMultiPocoFactory<TRet>(Database database, Type[] types, IDataReader r)
         {
             // Call each delegate
             var dels = new List<Delegate>();
@@ -142,7 +144,7 @@ namespace NPoco
             for (int i = 0; i < types.Length; i++)
             {
                 // Add to list of delegates to call
-                var del = FindSplitPoint(database, i, types[i], i + 1 < types.Length ? types[i + 1] : null, sql, connectionString, r, ref pos);
+                var del = FindSplitPoint(database, i, types[i], i + 1 < types.Length ? types[i + 1] : null, r, ref pos);
                 dels.Add(del);
             }
 
@@ -151,27 +153,23 @@ namespace NPoco
         }
 
         // Various cached stuff
-        static Cache<string, object> MultiPocoFactories = new Cache<string, object>();
-        static Cache<string, Delegate> AutoMappers = new Cache<string, Delegate>();
+        static Cache<string, object> MultiPocoFactories = Cache<string, object>.CreateManagedCache();
+        static Cache<string, Delegate> AutoMappers = Cache<string, Delegate>.CreateManagedCache();
 
         // Get (or create) the multi-poco factory for a query
-        public static Func<IDataReader, Delegate, TRet> GetMultiPocoFactory<TRet>(Database database, Type[] types, string sql, string connectionString, IDataReader r)
+        public static Func<IDataReader, Delegate, TRet> GetMultiPocoFactory<TRet>(Database database, Type[] types, IDataReader r)
         {
-            // Build a key string  (this is crap, should address this at some point)
-            var kb = new StringBuilder();
-            kb.Append(typeof(TRet).ToString());
-            kb.Append(":");
-            kb.Append(r.FieldCount);
-            kb.Append(":");
-            foreach (var t in types)
+            var combiner = new HashCodeCombiner("multi-mapping");
+            combiner.AddType(typeof(TRet));
+            combiner.Each(types, (x, t) => x.AddType(t));
+            for (int col = 0; col < r.FieldCount; col++)
             {
-                kb.Append(":" + t);
+                combiner.AddType(r.GetFieldType(col));
+                combiner.AddCaseInsensitiveString(r.GetName(col));
             }
-            kb.Append(":" + connectionString);
-            kb.Append(":" + sql);
-            string key = kb.ToString();
+            var key = combiner.GetCombinedHashCode();
 
-            return (Func<IDataReader, Delegate, TRet>)MultiPocoFactories.Get(key, () => CreateMultiPocoFactory<TRet>(database, types, sql, connectionString, r));
+            return (Func<IDataReader, Delegate, TRet>)MultiPocoFactories.Get(key, () => CreateMultiPocoFactory<TRet>(database, types, r));
         }
     }
 

@@ -48,6 +48,78 @@ namespace NPoco.Tests.FluentTests.QueryTests
         }
 
         [Test]
+        public void DistinctQueryWithProjection()
+        {
+            var userRecordsExist = Database.Query<User>().Distinct(y => new {y.IsMale});
+            Assert.AreEqual(2, userRecordsExist.Count);
+        }
+
+        [Test]
+        public void DistinctQueryWithProjectionAndLimit()
+        {
+            var userRecordsExist = Database.Query<User>().Limit(1).Distinct(y => new { y.IsMale });
+            Assert.AreEqual(1, userRecordsExist.Count);
+        }
+
+        [Test]
+        public void DistinctQueryWithSimpleProjection()
+        {
+            var userRecordsExist = Database.Query<User>().Distinct(y => y.IsMale);
+            Assert.AreEqual(2, userRecordsExist.Count);
+        }
+
+        [Test]
+        public void DistinctQuery()
+        {
+            var userRecordsExist = Database.Query<User>().Distinct();
+            Assert.AreEqual(15, userRecordsExist.Count);
+        }
+
+        [Test]
+        public void QueryWithWhereTrue()
+        {
+            var users = Database.Query<User>().Where(x => true).ToList();
+            Assert.AreEqual(15, users.Count);
+        }
+
+        [Test]
+        public void QueryWithWhereFalse()
+        {
+            var users = Database.Query<User>().Where(x => false).ToList();
+            Assert.AreEqual(0, users.Count);
+        }
+
+        [Test]
+        public void QueryWithWhereUserIdAndTrue()
+        {
+            var users = Database.Query<User>().Where(x => x.UserId == 1 && true).ToList();
+            Assert.AreEqual(1, users.Count);
+            Assert.AreEqual(1, users[0].UserId);
+        }
+
+        [Test]
+        public void QueryWithWhereChar()
+        {
+            var users = Database.Query<User>().Where(x => x.YorN == 'Y').ToList();
+            Assert.AreEqual(8, users.Count);
+        }
+
+        [Test]
+        public void QueryWithWhereCharNull()
+        {
+            var users = Database.Query<User>().Where(x => x.YorN == null).ToList();
+            Assert.AreEqual(0, users.Count);
+        }
+
+        [Test]
+        public void QueryWithWhereCharVar()
+        {
+            var s = 'Y';
+            var users = Database.Query<User>().Where(x => x.YorN == s && x.Age > 0).ToList();
+            Assert.AreEqual(8, users.Count);
+        }
+
+        [Test]
         public void QueryWithOrderBy()
         {
             var users = Database.Query<User>().OrderBy(x => x.DateOfBirth).ToList();
@@ -219,6 +291,95 @@ namespace NPoco.Tests.FluentTests.QueryTests
                 AssertUserValues(inmemory[i], users[i]);
                 AssertUserHouseValues(inmemory[i], users[i]);
             }
+        }
+
+        [Test]
+        public void QueryWithProjectionAndEnclosedMethod()
+        {
+            var users = Database.Query<User>()
+                .ProjectTo(x => new ProjectUser2 { FormattedAge = string.Format("{0:n}", x.Age) });
+
+            Assert.AreEqual("21.00", users[0].FormattedAge);
+            Assert.AreEqual(15, users.Count);
+        }
+
+        [Test]
+        public void QueryWithProjectionAndEnclosedMethod2()
+        {
+            var users = Database.Query<User>()
+                .ProjectTo(x => new ProjectUser2 { FormattedAge = FormatAge(x) });
+
+            Assert.AreEqual("Age: 21, IsMale: True", users[0].FormattedAge);
+            Assert.AreEqual(15, users.Count);
+        }
+
+        [Test]
+        public void QueryWithProjectionAndEnclosedMethod3()
+        {
+            var users = Database.Query<User>()
+                .ProjectTo(x => new ProjectUser2 { FormattedAge = FormatAge2(string.Format("{0}", string.Format("{0}", x.Age))) });
+
+            Assert.AreEqual("Age: 21", users[0].FormattedAge);
+            Assert.AreEqual(15, users.Count);
+        }
+
+        [Test]
+        public void QueryWithProjectionAndEnclosedMethod4()
+        {
+            var users = Database.Query<User>()
+                .ProjectTo(x => new ProjectUser2 { FormattedAge = x.Age + FormatAge(x) });
+
+            Assert.AreEqual("21Age: 21, IsMale: True", users[0].FormattedAge);
+            Assert.AreEqual(15, users.Count);
+        }
+
+        private string FormatAge2(string u)
+        {
+            return string.Format("Age: {0}", u);
+        }
+
+        private string FormatAge(User u)
+        {
+            return string.Format("Age: {0}, IsMale: {1}", u.Age, u.IsMale);
+        }
+
+        [Test]
+        public void QueryWithProjectionAndMethod()
+        {
+            var users = Database.Query<User>()
+                .ProjectTo(x => new ProjectUser2 { Age = x.Age, Date = x.DateOfBirth.ToString("yyyy-MM-dd") });
+
+            Assert.AreEqual(21, users[0].Age);
+            Assert.AreEqual("1969-01-01", users[0].Date);
+            Assert.AreEqual(15, users.Count);
+        }
+
+        [Test]
+        public void QueryWithProjection()
+        {
+            var users = Database.Query<User>()
+                .ProjectTo(x => new ProjectUser2 { Age = x.Age });
+
+            Assert.AreEqual(21, users[0].Age);
+            Assert.AreEqual(15, users.Count);
+        }
+
+        [Test]
+        public void QueryWithProjectionAndLimit()
+        {
+            var users = Database.Query<User>()
+                .Limit(10)
+                .ProjectTo(x => new { x.Age });
+
+            Assert.AreEqual(21, users[0].Age);
+            Assert.AreEqual(10, users.Count);
+        }
+
+        public class ProjectUser2
+        {
+            public int Age { get; set; }
+            public string FormattedAge { get; set; }
+            public string Date { get; set; }
         }
 
         [Test]

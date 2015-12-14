@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\ColumnInfoTests.cs" />
     <Compile Include="Common\CompositeObjectDecorated.cs" />
     <Compile Include="Common\AssignedPkObjectDecorated.cs" />
     <Compile Include="Common\BaseDBDecoratedTest.cs" />
@@ -98,7 +99,9 @@
     <Compile Include="FluentTests\QueryTests\PagingFluentTest.cs" />
     <Compile Include="FluentTests\QueryTests\SingleAndFirstQueryFluentTest.cs" />
     <Compile Include="FormatCommandTest.cs" />
+    <Compile Include="HashCodeCombinerTests.cs" />
     <Compile Include="PagingHelper.cs" />
+    <Compile Include="ParameterHelper.cs" />
     <Compile Include="PocoExpandoTests.cs" />
     <Compile Include="SnapshotterTests.cs" />
     <Compile Include="FluentMappings\ColumnConfigurationBuilderTests.cs" />

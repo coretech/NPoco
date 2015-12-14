@@ -329,6 +329,7 @@ namespace NPoco
         // Abort the entire outer most transaction scope
         public void AbortTransaction()
         {
+            TransactionIsAborted = true;
             AbortTransaction(false);
         }
 
@@ -821,7 +822,7 @@ namespace NPoco
 
                     using (r)
                     {
-                        var factory = pd.MappingFactory.GetFactory(cmd.CommandText, _sharedConnection.ConnectionString, 0, r.FieldCount, r, instance) as Func<IDataReader, T, T>;
+                        var factory = pd.MappingFactory.GetFactory(0, r.FieldCount, r, instance) as Func<IDataReader, T, T>;
                         while (true)
                         {
                             T poco;
@@ -935,7 +936,7 @@ namespace NPoco
                         OnException(x);
                         throw;
                     }
-                    var factory = MultiPocoFactory.GetMultiPocoFactory<TRet>(this, types, sql.SQL, _sharedConnection.ConnectionString, r);
+                    var factory = MultiPocoFactory.GetMultiPocoFactory<TRet>(this, types, r);
                     if (cb == null) cb = MultiPocoFactory.GetAutoMapper(types.ToArray());
                     var bNeedTerminator = false;
                     using (r)
@@ -1067,7 +1068,7 @@ namespace NPoco
                                 break;
 
                             var pd = PocoDataFactory.ForType(types[typeIndex - 1]);
-                            var factory = pd.MappingFactory.GetFactory(cmd.CommandText, _sharedConnection.ConnectionString, 0, r.FieldCount, r, null);
+                            var factory = pd.MappingFactory.GetFactory(0, r.FieldCount, r, null);
 
                             while (true)
                             {
@@ -1243,8 +1244,12 @@ namespace NPoco
                 foreach (var i in pd.Columns)
                 {
                     // Don't insert result columns
-                    if (i.Value.ResultColumn || i.Value.ComputedColumn)
+                    if (i.Value.ResultColumn 
+                        || i.Value.ComputedColumn 
+                        || (i.Value.VersionColumn && i.Value.VersionColumnType == VersionColumnType.RowVersion))
+                    {
                         continue;
+                    }
 
                     // Don't insert the primary key (except under oracle where we need bring in the next sequence value)
                     if (autoIncrement && primaryKeyName != null && string.Compare(i.Key, primaryKeyName, true) == 0)
@@ -1263,10 +1268,10 @@ namespace NPoco
                     values.Add(string.Format("{0}{1}", _paramPrefix, index++));
 
                     object val = ProcessMapper(i.Value, i.Value.GetValue(poco));
-                    
-                    if (i.Value.VersionColumn)
+
+                    if (i.Value.VersionColumn && i.Value.VersionColumnType == VersionColumnType.Number)
                     {
-                        val = (long)val > 0 ? val : 1;
+                        val = Convert.ToInt64(val) > 0 ? val : 1;
                         versionName = i.Key;
                     }
 
@@ -1378,6 +1383,7 @@ namespace NPoco
             var pd = PocoDataFactory.ForObject(poco, primaryKeyName);
             string versionName = null;
             object versionValue = null;
+            VersionColumnType versionColumnType = VersionColumnType.Number;
 
             var primaryKeyValuePairs = GetPrimaryKeyValues(primaryKeyName, primaryKeyValue);
 
@@ -1403,7 +1409,16 @@ namespace NPoco
                 {
                     versionName = i.Key;
                     versionValue = value;
-                    value = Convert.ToInt64(value) + 1;
+                    if (i.Value.VersionColumnType == VersionColumnType.Number)
+                    {
+                        versionColumnType = VersionColumnType.Number;
+                        value = Convert.ToInt64(value) + 1;
+                    }
+                    else if (i.Value.VersionColumnType == VersionColumnType.RowVersion)
+                    {
+                        versionColumnType = VersionColumnType.RowVersion;
+                        continue;
+                    }
                 }
 
                 // Build the sql
@@ -1435,7 +1450,7 @@ namespace NPoco
             }
 
             // Set Version
-            if (!string.IsNullOrEmpty(versionName))
+            if (!string.IsNullOrEmpty(versionName) && versionColumnType == VersionColumnType.Number)
             {
                 PocoColumn pc;
                 if (pd.Columns.TryGetValue(versionName, out pc))
@@ -1773,7 +1788,7 @@ namespace NPoco
         private string _lastSql;
         private object[] _lastArgs;
         private string _paramPrefix = "@";
-        private VersionExceptionHandling _versionException = VersionExceptionHandling.Ignore;
+        private VersionExceptionHandling _versionException = VersionExceptionHandling.Exception;
 
         internal int ExecuteNonQueryHelper(IDbCommand cmd)
         {

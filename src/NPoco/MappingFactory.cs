@@ -18,18 +18,32 @@ namespace NPoco
         static FieldInfo fldConverters = typeof(MappingFactory).GetField("m_Converters", BindingFlags.Static | BindingFlags.GetField | BindingFlags.NonPublic);
         static MethodInfo fnListGetItem = typeof(List<Func<object, object>>).GetProperty("Item").GetGetMethod();
         static MethodInfo fnInvoke = typeof(Func<object, object>).GetMethod("Invoke");
-        static Cache<Type, Type> _underlyingTypes = new Cache<Type, Type>();
-        Cache<string, Delegate> _pocoFactories = new Cache<string, Delegate>();
+        static Cache<Type, Type> _underlyingTypes = Cache<Type, Type>.CreateStaticCache();
+
+        //This will use a managed cache with items that expire
+        Cache<string, Delegate> _pocoFactories = Cache<string, Delegate>.CreateManagedCache();
 
         public MappingFactory(PocoData pocoData)
         {
             _pocoData = pocoData;
         }
 
-        public Delegate GetFactory(string sql, string connString, int firstColumn, int countColumns, IDataReader r, object instance)
+        public Delegate GetFactory(int firstColumn, int countColumns, IDataReader r, object instance)
         {
-            // Check cache
-            var key = string.Format("{0}:{1}:{2}:{3}:{4}:{5}", sql, connString, firstColumn, countColumns, instance != GetDefault(_pocoData.type), _pocoData.EmptyNestedObjectNull);
+            //Create a hashed key, we don't want to store so much string data in memory
+            var combiner = new HashCodeCombiner("mapping");
+            combiner.AddType(_pocoData.type);
+            combiner.AddInt(firstColumn);
+            combiner.AddInt(countColumns);
+            for (int col = 0; col < r.FieldCount; col++)
+            {
+                combiner.AddType(r.GetFieldType(col));
+                combiner.AddCaseInsensitiveString(r.GetName(col));
+            }
+            combiner.AddBool(instance != GetDefault(_pocoData.type));
+            combiner.AddBool(_pocoData.EmptyNestedObjectNull);
+
+            var key = combiner.GetCombinedHashCode();
  
             Func<Delegate> createFactory = () =>
             {
